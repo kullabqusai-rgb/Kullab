@@ -51,8 +51,11 @@
     background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;}
 
   /* ── CANVAS ── */
-  #canvas-wrap{width:100%;min-height:calc(100vh - 110px);overflow:auto;position:relative;
-    background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(201,150,42,.04) 0%,transparent 60%),var(--bg);}
+  #canvas-wrap{width:100%;height:calc(100vh - 110px);overflow:hidden;position:relative;
+    background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(201,150,42,.04) 0%,transparent 60%),var(--bg);
+    cursor:grab;touch-action:none;user-select:none;}
+  #canvas-wrap.panning{cursor:grabbing;}
+  #tree-inner{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform;}
   #tree-canvas{position:relative;padding:60px 40px 120px;}
   svg#lines{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;}
 
@@ -247,6 +250,7 @@
 </div>
 
 <div id="canvas-wrap">
+  <div id="tree-inner">
   <div id="tree-canvas">
     <svg id="lines" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="focusFrame"></div>
@@ -255,6 +259,7 @@
       <p>لا توجد بيانات بعد</p>
       <p style="font-size:12px;color:var(--text-dim)" id="emptyHint">سجّل دخولك كمدير لبدء الإضافة</p>
     </div>
+  </div>
   </div>
 </div>
 
@@ -525,6 +530,7 @@ async function loadFromCloud(){
     if(r2.ok){const j=await r2.json();tempPasswords=(j.record||{}).tempPws||[];}
   }catch(e){toast('⚠️ تعذّر الاتصال بالسحابة');}
   bar(false); render();
+  setTimeout(()=>{ window._userHasPanned=false; window._centerTree&&window._centerTree(); }, 400);
 }
 
 let _saveTimer=null;
@@ -633,7 +639,7 @@ function render(){
   let maxX=0,maxY=0;
   ids.forEach(id=>{ maxX=Math.max(maxX,nodes[id].x+NODE_W+40); maxY=Math.max(maxY,nodes[id].y+NODE_H+40); });
   canvas.style.width =maxX+'px';
-  canvas.style.height=Math.max(maxY,window.innerHeight-150)+'px';
+  canvas.style.height=Math.max(maxY,window.innerHeight-150)+400+'px';
   document.getElementById('lines').setAttribute('width', maxX);
   document.getElementById('lines').setAttribute('height',Math.max(maxY,window.innerHeight-150));
 
@@ -649,6 +655,7 @@ function updateToolbar(){
   tb.innerHTML=`
     ${adminBtns}
     <button class="btn btn-blue" onclick="openExportModal()">📤 تصدير</button>
+    <button class="btn btn-outline" onclick="window._userHasPanned=false;window._centerTree&&window._centerTree()" title="توسيط الشجرة">🎯</button>
     <span style="font-size:13px;color:var(--text-dim);padding:0 6px">👥 <strong style="color:var(--gold)">${Object.keys(nodes).length}</strong> فرد</span>
   `;
 }
@@ -1096,12 +1103,13 @@ function focusNode(id){
   frame.style.height=(NODE_H+16)+'px';
   setTimeout(()=>{ if(frame) frame.style.display='none'; },3500);
 
-  // Scroll: استخدم scrollIntoView على العقدة مباشرة ثم صحّح للتوسيط
-  if(nodeEl){
-    setTimeout(()=>{
-      nodeEl.scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
-    }, 50);
-  }
+  // تحريك الـ pan نحو العقدة
+  const wrap=document.getElementById('canvas-wrap');
+  if(!wrap) return;
+  const ww=wrap.offsetWidth, wh=wrap.offsetHeight;
+  const nodeCX = n.x + NODE_W/2;
+  const nodeCY = n.y + NODE_H/2;
+  window._panTo(nodeCX, nodeCY, ww, wh);
 }
 
 function clearHighlight(){
@@ -1453,27 +1461,16 @@ function openExportPartial(){ openExportModal(); }
 //  LONG-PRESS TOOLTIP
 // ══════════════════════════════════════════════════
 let _lpTimer=null;
-const LP_DELAY=450; // ms للضغط المطول
 
 function attachLongPress(el, id){
-  // لمس (موبايل)
-  el.addEventListener('touchstart', e=>{
-    // تجاهل لو كان الضغط على زر
-    if(e.target.closest('.node-btn')) return;
-    _lpTimer=setTimeout(()=>{ showLpTooltip(id, e.touches[0]); }, LP_DELAY);
-  }, {passive:true});
-
-  el.addEventListener('touchend',  hideLpTooltip, {passive:true});
-  el.addEventListener('touchmove', ()=>{ clearTimeout(_lpTimer); }, {passive:true});
-
-  // ماوس (ديسكتوب)
+  // ماوس فقط — الـ touch يُعالَج في نظام الـ pan الموحّد
   el.addEventListener('mousedown', e=>{
     if(e.target.closest('.node-btn')) return;
-    _lpTimer=setTimeout(()=>showLpTooltip(id, e), LP_DELAY);
+    _lpTimer=setTimeout(()=>showLpTooltip(id, e), 450);
   });
   el.addEventListener('mouseup',   hideLpTooltip);
   el.addEventListener('mouseleave',hideLpTooltip);
-  el.addEventListener('contextmenu',e=>e.preventDefault()); // امنع قائمة السياق على موبايل
+  el.addEventListener('contextmenu',e=>e.preventDefault());
 }
 
 function showLpTooltip(id, pointerEvent){
@@ -1521,77 +1518,174 @@ function showLpTooltip(id, pointerEvent){
 }
 
 function hideLpTooltip(){
-  clearTimeout(_lpTimer);
-  _lpTimer=null;
+  clearTimeout(_lpTimer); _lpTimer=null;
   document.getElementById('lpTooltip').classList.remove('show');
 }
 
 // ══════════════════════════════════════════════════
-//  ZOOM SYSTEM (Pinch Zoom + Wheel Zoom)
+//  ZOOM + PAN + LONG-PRESS — موحّد بدون تعارض
 // ══════════════════════════════════════════════════
-let currentZoom = 1;
-const MIN_ZOOM = 0.5; // تصغير حتى 50%
-const MAX_ZOOM = 3;   // تكبير حتى 300%
-const ZOOM_STEP = 0.1;
+(function(){
+  const W=()=>document.getElementById('canvas-wrap');
+  const TI=()=>document.getElementById('tree-inner');
 
-function setZoom(newZoom) {
-  const tree = document.getElementById('tree-canvas');
-  if(!tree) return;
-  
-  currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-  
-  // استخدام zoom property بدل transform (يعمل بشكل أفضل على الهاتف)
-  tree.style.zoom = currentZoom;
-}
+  /* ── State ── */
+  let _s=1, _tx=0, _ty=0;          // scale + translate
+  const MIN=0.1, MAX=4;
 
-// عجلة الماوس (أو trackpad)
-document.addEventListener('wheel', (e) => {
-  const wrap = document.getElementById('canvas-wrap');
-  if(!wrap || !wrap.contains(e.target)) return;
-  
-  if(e.ctrlKey || e.metaKey) {
-    e.preventDefault();
-    const direction = e.deltaY > 0 ? -1 : 1;
-    setZoom(currentZoom + direction * ZOOM_STEP);
+  function apply(){
+    const el=TI(); if(!el) return;
+    el.style.transform=`translate(${_tx}px,${_ty}px) scale(${_s})`;
   }
-}, { passive: false });
 
-// Pinch Zoom للهاتف
-let lastDistance = 0;
-let zoomStarted = false;
-
-document.addEventListener('touchstart', (e) => {
-  if(e.touches.length === 2) {
-    zoomStarted = true;
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    lastDistance = Math.sqrt(dx*dx + dy*dy);
+  function zoomAt(cx,cy,factor){
+    const ns=Math.max(MIN,Math.min(MAX,_s*factor));
+    if(ns===_s) return;
+    _tx=cx-(cx-_tx)*(ns/_s);
+    _ty=cy-(cy-_ty)*(ns/_s);
+    _s=ns; apply();
   }
-}, { passive: true });
 
-document.addEventListener('touchmove', (e) => {
-  if(e.touches.length === 2 && zoomStarted) {
-    const wrap = document.getElementById('canvas-wrap');
-    if(!wrap || !wrap.contains(e.target)) return;
-    
-    e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const distance = Math.sqrt(dx*dx + dy*dy);
-    
-    if(lastDistance > 0) {
-      const ratio = distance / lastDistance;
-      const change = (ratio - 1) * 0.5;
-      setZoom(currentZoom + change);
+  /* ── Center Tree ── */
+  window._userHasPanned = false;
+  window._centerTree = function(){
+    const wrap = W(); if(!wrap) return;
+    const ids = Object.keys(nodes);
+    if(!ids.length) return;
+
+    // إيجاد الجذر (أعلى عقدة في الشجرة)
+    const rootId = Object.keys(nodes).find(id => !nodes[id].parentId) || Object.keys(nodes)[0];
+    const root = nodes[rootId];
+    if(!root) return;
+
+    const ww = window.innerWidth;
+    const wh = window.innerHeight - 150;
+
+    // scale ثابت مناسب للقراءة
+    _s = 0.45;
+
+    // ضع الجذر في منتصف الشاشة أفقياً وعمودياً
+    _tx = ww/2 - (root.x + NODE_W/2) * _s;
+    _ty = wh/2 - (root.y + NODE_H/2) * _s;
+
+    apply();
+  };
+
+  /* ── panTo للبحث ── */
+  window._panTo=function(nodeCX,nodeCY,ww,wh){
+    const targetTx=ww/2-nodeCX*_s;
+    const targetTy=wh/2-nodeCY*_s;
+    const sx=_tx,sy=_ty; const dur=450,t0=performance.now();
+    function step(now){
+      const p=Math.min(1,(now-t0)/dur);
+      const e=1-Math.pow(1-p,3);
+      _tx=sx+(targetTx-sx)*e; _ty=sy+(targetTy-sy)*e; apply();
+      if(p<1) requestAnimationFrame(step);
     }
-    lastDistance = distance;
-  }
-}, { passive: false });
+    requestAnimationFrame(step);
+  };
+  window._applyTransform=apply;
+  window._scale=new Proxy({},{get:()=>_s});
 
-document.addEventListener('touchend', () => {
-  zoomStarted = false;
-  lastDistance = 0;
-}, { passive: true });
+  /* ══ WHEEL ══ */
+  document.addEventListener('wheel',e=>{
+    const w=W(); if(!w||!w.contains(e.target)) return;
+    e.preventDefault();
+    window._userHasPanned = true;
+    const r=w.getBoundingClientRect();
+    zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:0.90);
+  },{passive:false});
+
+  /* ══ MOUSE PAN ══ */
+  let mp=false,mpx=0,mpy=0;
+  document.addEventListener('mousedown',e=>{
+    const w=W(); if(!w||!w.contains(e.target)) return;
+    if(e.button!==0) return;
+    if(e.target.closest('button,.node-btn')) return;
+    mp=true; mpx=e.clientX-_tx; mpy=e.clientY-_ty;
+    window._userHasPanned = true;
+    w.classList.add('panning');
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!mp) return;
+    _tx=e.clientX-mpx; _ty=e.clientY-mpy; apply();
+  });
+  document.addEventListener('mouseup',()=>{ mp=false; W()?.classList.remove('panning'); });
+
+  /* ══ TOUCH: PAN + PINCH + LONG-PRESS (موحّد) ══ */
+  let _lt=[];          // last touches
+  let _lpTimer=null;   // long-press timer
+  let _moved=false;    // هل تحرك الإصبع؟
+
+  function dst(a,b){const dx=a.clientX-b.clientX,dy=a.clientY-b.clientY;return Math.sqrt(dx*dx+dy*dy);}
+  function mid(a,b){return{x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};}
+  function tc(e){return Array.from(e.touches);}
+
+  document.addEventListener('touchstart',e=>{
+    const w=W(); if(!w||!w.contains(e.target)) return;
+    const cur=tc(e);
+    _lt=cur; _moved=false;
+
+    // long-press: فقط إصبع واحد على عقدة
+    if(cur.length===1){
+      const nodeEl=e.target.closest('.node');
+      if(nodeEl && !e.target.closest('button,.node-btn')){
+        const id=nodeEl.id.replace('node-','');
+        clearTimeout(_lpTimer);
+        _lpTimer=setTimeout(()=>{
+          if(!_moved) showLpTooltip(id, cur[0]);
+        },450);
+      }
+    } else {
+      // إصبعان: ألغِ الـ long-press
+      clearTimeout(_lpTimer); _lpTimer=null;
+    }
+  },{passive:true});
+
+  document.addEventListener('touchmove',e=>{
+    const w=W(); if(!w||!w.contains(e.target)) return;
+    const cur=tc(e);
+    if(!_lt.length){_lt=cur;return;}
+
+    // أي حركة تلغي الـ long-press
+    const moved=dst(cur[0],_lt[0])>5;
+    if(moved){ _moved=true; clearTimeout(_lpTimer); _lpTimer=null; window._userHasPanned=true; }
+
+    if(!_moved && cur.length===1) { _lt=cur; return; } // لا تحريك بعد
+
+    e.preventDefault();
+    const r=w.getBoundingClientRect();
+
+    if(cur.length===1){
+      _tx+=cur[0].clientX-_lt[0].clientX;
+      _ty+=cur[0].clientY-_lt[0].clientY;
+      apply();
+    } else if(cur.length===2 && _lt.length===2){
+      const mC=mid(cur[0],cur[1]), mL=mid(_lt[0],_lt[1]);
+      _tx+=mC.x-mL.x; _ty+=mC.y-mL.y;
+      const dC=dst(cur[0],cur[1]), dL=dst(_lt[0],_lt[1]);
+      if(dL>5){
+        const cx=mC.x-r.left, cy=mC.y-r.top;
+        const ns=Math.max(MIN,Math.min(MAX,_s*(dC/dL)));
+        _tx=cx-(cx-_tx)*(ns/_s);
+        _ty=cy-(cy-_ty)*(ns/_s);
+        _s=ns;
+      }
+      apply();
+    }
+    _lt=cur;
+  },{passive:false});
+
+  document.addEventListener('touchend',e=>{
+    clearTimeout(_lpTimer); _lpTimer=null;
+    hideLpTooltip();
+    _lt=tc(e);
+  },{passive:true});
+
+})();
+</script>
+</body>
+</html>
 </script>
 </body>
 </html>
