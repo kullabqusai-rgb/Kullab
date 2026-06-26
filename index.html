@@ -14,6 +14,16 @@
     --border:#2e2820; --red:#c0392b; --green:#27ae60;
     --node-w:160px;
   }
+  html.light-theme {
+    --bg:#f5f0e8; --surface:#fffdf7; --surface2:#f0ead8;
+    --gold:#a07020; --gold-light:#c9962a; --gold-dim:#c9a84c;
+    --text:#1a1208; --text-dim:#6a5a42;
+    --border:#d4c4a0; --red:#c0392b; --green:#27ae60;
+  }
+  html.light-theme header{background:linear-gradient(135deg,#f0ead8,#e8e0cc);}
+  html.light-theme #canvas-wrap{background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(201,150,42,.08) 0%,transparent 60%),var(--bg);}
+  html.light-theme .node{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+  html.light-theme svg line, html.light-theme svg path{stroke:#a07020 !important;opacity:0.6;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min-height:100vh;overflow-x:hidden;}
 
@@ -85,6 +95,21 @@
   .node-btn-del:hover{background:rgba(192,57,43,.3);}
   .node-btn-parent{background:rgba(52,152,219,.15);color:#5dade2;border:1px solid rgba(52,152,219,.4);}
   .node-btn-parent:hover{background:rgba(52,152,219,.3);}
+
+  /* ── أزرار التنقل بين الإخوة ── */
+  .sibling-nav{position:absolute;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:3px;z-index:10;}
+  .sibling-nav.nav-right{right:-28px;}
+  .sibling-nav.nav-left{left:-28px;}
+  .sibling-nav.nav-up{top:-28px;left:50%;transform:translateX(-50%);}
+  .sibling-nav.nav-down{top:auto;bottom:-28px;left:50%;transform:translateX(-50%);}
+  .sibnav-btn{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--gold-dim);
+    background:var(--surface2);color:var(--gold);font-size:11px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .15s;padding:0;line-height:1;}
+  .sibnav-btn:hover{background:var(--gold);color:#000;border-color:var(--gold);
+    transform:scale(1.15);}
+  .sibnav-up{font-size:13px;}
 
   /* ── LONG-PRESS TOOLTIP ── */
   #lpTooltip{
@@ -368,6 +393,15 @@
       <input type="number" id="pBirth" placeholder="مثال: 1970" min="1800" max="2099"></div>
     <div class="form-group"><label>ملاحظة</label>
       <input type="text" id="pNote" placeholder="أي معلومة إضافية"></div>
+    <!-- أزرار الترتيب — تظهر فقط عند التعديل -->
+    <div id="reorderBtns" style="display:none;margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;font-weight:600">ترتيب بين الإخوة:</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1;font-size:12px" onclick="reorderNode('right')">▶ تأخير (يمين)</button>
+        <button class="btn btn-outline" style="flex:1;font-size:12px" onclick="reorderNode('left')">تقديم (يسار) ◀</button>
+      </div>
+      <div id="reorderPos" style="font-size:11px;color:var(--gold);text-align:center;margin-top:5px"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('personModal')">إلغاء</button>
       <button class="btn btn-gold" onclick="savePerson()">حفظ</button>
@@ -578,6 +612,8 @@ function bar(on){
 window.onload=()=>{
   loadBinConfig();
   if(isCloudOK()) loadFromCloud(); else render();
+  // تعيين order للأشخاص القدامى الذين ليس لهم order
+  setTimeout(initOrders, 800);
 };
 
 // ══════════════════════════════════════════════════
@@ -590,8 +626,11 @@ function autoLayout(){
     if(!n.parentId) roots.push(n.id);
     else{ (children[n.parentId]=children[n.parentId]||[]).push(n.id); }
   });
+  // رتب الأبناء حسب order
+  Object.keys(children).forEach(pid=>{
+    children[pid].sort((a,b)=>(nodes[a].order||0)-(nodes[b].order||0));
+  });
 
-  // Assign column widths (leaf=1 col, branch=sum of children)
   function spanOf(id){
     const kids=children[id]||[];
     if(!kids.length) return 1;
@@ -656,8 +695,11 @@ function updateToolbar(){
     ${adminBtns}
     <button class="btn btn-blue" onclick="openExportModal()">📤 تصدير</button>
     <button class="btn btn-outline" onclick="window._userHasPanned=false;window._centerTree&&window._centerTree()" title="توسيط الشجرة">🎯</button>
+    <button class="btn btn-outline" id="themeBtn" onclick="toggleTheme()" title="تبديل المظهر">🌙</button>
     <span style="font-size:13px;color:var(--text-dim);padding:0 6px">👥 <strong style="color:var(--gold)">${Object.keys(nodes).length}</strong> فرد</span>
   `;
+  const tb2=document.getElementById('themeBtn');
+  if(tb2) tb2.textContent=document.documentElement.classList.contains('light-theme')?'☀️':'🌙';
 }
 
 function drawNode(id){
@@ -676,7 +718,39 @@ function drawNode(id){
   const editBtn=canEdit?`<button class="node-btn node-btn-edit" onclick="openEdit('${id}')">✏️</button>`:'';
   const delBtn =canEdit?`<button class="node-btn node-btn-del"  onclick="openDelete('${id}')">🗑️</button>`:'';
 
+  // أزرار التنقل بين الإخوة
+  let sibNavHTML='';
+  if(n.parentId){
+    const siblings=Object.values(nodes)
+      .filter(s=>s.parentId===n.parentId)
+      .sort((a,b)=>a.x-b.x);
+    const idx=siblings.findIndex(s=>s.id===id);
+    const DIST_THRESHOLD = NODE_W * 3;
+
+    const prevSib = idx>0 ? siblings[idx-1] : null;
+    const nextSib = idx<siblings.length-1 ? siblings[idx+1] : null;
+
+    const prevFar = prevSib && (n.x - prevSib.x) > DIST_THRESHOLD;
+    const nextFar = nextSib && (nextSib.x - n.x) > DIST_THRESHOLD;
+
+    const upBtn = `<button class="sibnav-btn sibnav-up" onclick="navToSibling('${n.parentId}')" title="الأب">↑</button>`;
+    const prevBtn = prevFar ? `<button class="sibnav-btn" onclick="navToSibling('${prevSib.id}')" title="الأخ السابق">◀</button>` : '';
+    const nextBtn = nextFar ? `<button class="sibnav-btn" onclick="navToSibling('${nextSib.id}')" title="الأخ التالي">▶</button>` : '';
+
+    sibNavHTML=`
+      <div class="sibling-nav nav-up">${upBtn}</div>
+      ${nextFar?`<div class="sibling-nav nav-right">${nextBtn}</div>`:''}
+      ${prevFar?`<div class="sibling-nav nav-left">${prevBtn}</div>`:''}`;
+  }
+
+  // زر ↓ لكل أب له أبناء
+  const myChildren = Object.values(nodes).filter(c=>c.parentId===id).sort((a,b)=>a.x-b.x);
+  if(myChildren.length){
+    sibNavHTML += `<div class="sibling-nav nav-down"><button class="sibnav-btn sibnav-down" onclick="navDown('${id}')" title="الابن">↓</button></div>`;
+  }
+
   div.innerHTML=`
+    ${sibNavHTML}
     <div class="node-avatar">${emoji}</div>
     <div class="node-name">${n.name}</div>
     <div class="node-info">${n.birth?'📅 '+n.birth:''}${n.note?(n.birth?' · ':'')+n.note:''}</div>
@@ -692,42 +766,30 @@ function drawLines(){
   Object.values(nodes).forEach(n=>{
     if(!n.parentId) return;
     const p=nodes[n.parentId]; if(!p) return;
-
     const px=p.x+NODE_W/2, py=p.y+NODE_H;
     const cx=n.x+NODE_W/2, cy=n.y;
     const mid=(py+cy)/2;
-
-    // Curve
     const path=document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d',`M${px},${py} C${px},${mid} ${cx},${mid} ${cx},${cy}`);
-    path.setAttribute('stroke','#c9962a');
-    path.setAttribute('stroke-width','2');
-    path.setAttribute('fill','none');
-    path.setAttribute('stroke-linecap','round');
+    path.setAttribute('stroke','#c9962a'); path.setAttribute('stroke-width','2');
+    path.setAttribute('fill','none'); path.setAttribute('stroke-linecap','round');
     path.setAttribute('opacity','0.55');
     svg.appendChild(path);
-
-    // Arrow at child
     const arr=document.createElementNS('http://www.w3.org/2000/svg','polygon');
     arr.setAttribute('points',`${cx},${cy} ${cx-5},${cy-8} ${cx+5},${cy-8}`);
-    arr.setAttribute('fill','#c9962a');
-    arr.setAttribute('opacity','0.7');
+    arr.setAttribute('fill','#c9962a'); arr.setAttribute('opacity','0.7');
     svg.appendChild(arr);
   });
-
-  // Sibling connector: horizontal line between children of same parent
   const byParent={};
   Object.values(nodes).forEach(n=>{ if(n.parentId)(byParent[n.parentId]=byParent[n.parentId]||[]).push(n); });
   Object.values(byParent).forEach(siblings=>{
     if(siblings.length<2) return;
     const ys=siblings.map(s=>s.y);
-    const allSameRow=ys.every(y=>y===ys[0]);
-    if(!allSameRow) return;
+    if(!ys.every(y=>y===ys[0])) return;
     const xs=siblings.map(s=>s.x+NODE_W/2).sort((a,b)=>a-b);
-    const y=ys[0];
     const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1',xs[0]); line.setAttribute('y1',y-20);
-    line.setAttribute('x2',xs[xs.length-1]); line.setAttribute('y2',y-20);
+    line.setAttribute('x1',xs[0]); line.setAttribute('y1',ys[0]-20);
+    line.setAttribute('x2',xs[xs.length-1]); line.setAttribute('y2',ys[0]-20);
     line.setAttribute('stroke','#c9962a'); line.setAttribute('stroke-width','1.5');
     line.setAttribute('opacity','0.35');
     svg.appendChild(line);
@@ -776,6 +838,17 @@ function openEdit(id){
   document.getElementById('pBirth').value =n.birth||'';
   document.getElementById('pNote').value  =n.note ||'';
   document.getElementById('personModalTitle').textContent='تعديل: '+n.name;
+
+  // أظهر أزرار الترتيب إذا له إخوة
+  const reorderDiv=document.getElementById('reorderBtns');
+  if(n.parentId){
+    const siblings=Object.values(nodes).filter(s=>s.parentId===n.parentId).sort((a,b)=>(a.order||0)-(b.order||0));
+    const idx=siblings.findIndex(s=>s.id===id);
+    reorderDiv.style.display='block';
+    document.getElementById('reorderPos').textContent=`الترتيب الحالي: ${idx+1} من ${siblings.length}`;
+  } else {
+    reorderDiv.style.display='none';
+  }
   openModal('personModal');
 }
 function clearPF(){
@@ -807,10 +880,13 @@ function savePerson(){
     delete modal.dataset.addParentFor;
   } else {
     const id='n'+(nextId++);
+    // order = آخر ترتيب بين الإخوة + 1
+    const sibOrder=Object.values(nodes).filter(n=>n.parentId===editingParentId).map(n=>n.order||0);
+    const newOrder=sibOrder.length ? Math.max(...sibOrder)+1 : 0;
     nodes[id]={id,name,gender:document.getElementById('pGender').value,
       birth:document.getElementById('pBirth').value,
       note:document.getElementById('pNote').value.trim(),
-      parentId:editingParentId,x:0,y:0};
+      parentId:editingParentId,x:0,y:0,order:newOrder};
   }
   save(); closeModal('personModal'); render(); toast('✅ تم الحفظ');
 }
@@ -1110,6 +1186,106 @@ function focusNode(id){
   const nodeCX = n.x + NODE_W/2;
   const nodeCY = n.y + NODE_H/2;
   window._panTo(nodeCX, nodeCY, ww, wh);
+}
+
+function reorderNode(dir){
+  const id=editingId; if(!id||!nodes[id]||!nodes[id].parentId) return;
+  const n=nodes[id];
+  const siblings=Object.values(nodes)
+    .filter(s=>s.parentId===n.parentId)
+    .sort((a,b)=>(a.order??0)-(b.order??0));
+  const idx=siblings.findIndex(s=>s.id===id);
+
+  const swapIdx = dir==='left' ? idx-1 : idx+1;
+  if(swapIdx<0||swapIdx>=siblings.length){ toast('⚠️ لا يمكن التحريك'); return; }
+
+  // تبادل الـ order بشكل صحيح
+  const other=siblings[swapIdx];
+  const tmpOrder = n.order??idx;
+  n.order = other.order??swapIdx;
+  other.order = tmpOrder;
+
+  // تطبيع 0,1,2,3...
+  siblings.sort((a,b)=>(a.order??0)-(b.order??0));
+  siblings.forEach((s,i)=>{ nodes[s.id].order=i; });
+
+  const newIdx=siblings.findIndex(s=>s.id===id);
+  document.getElementById('reorderPos').textContent=`الترتيب الحالي: ${newIdx+1} من ${siblings.length}`;
+  save(); render();
+  toast(`✅ ${dir==='left'?'تم التقديم':'تم التأخير'}`);
+}
+
+function initOrders(){
+  // أضف order فقط للأشخاص الذين ليس لهم order بعد — لا نمس من لديه order
+  let changed=false;
+  const byParent={};
+  Object.values(nodes).forEach(n=>{
+    if(!n.parentId) return;
+    (byParent[n.parentId]=byParent[n.parentId]||[]).push(n);
+  });
+  Object.values(byParent).forEach(siblings=>{
+    // الأشخاص الذين لديهم order بالفعل
+    const maxExisting = siblings
+      .filter(s=>s.order!==undefined&&s.order!==null)
+      .reduce((m,s)=>Math.max(m,s.order),-1);
+    let next=maxExisting+1;
+    // رتب من ليس لديه order حسب رقم id فقط
+    siblings
+      .filter(s=>s.order===undefined||s.order===null)
+      .sort((a,b)=>parseInt(a.id.replace('n',''))-parseInt(b.id.replace('n','')))
+      .forEach(s=>{ s.order=next++; changed=true; });
+  });
+  if(changed) save();
+  // لا نستدعي render() لتجنب أي تأثير جانبي
+}
+
+function navDown(parentId){
+  const children = Object.values(nodes)
+    .filter(c=>c.parentId===parentId)
+    .sort((a,b)=>a.x-b.x);
+  if(!children.length) return;
+
+  // هل يوجد شخص محدد في البحث؟
+  const searchVal = document.getElementById('searchInput').value.trim();
+  let targetId = null;
+
+  if(searchVal && _lastFocusedId && nodes[_lastFocusedId]){
+    const focused = nodes[_lastFocusedId];
+    // هل الشخص المبحوث ابن مباشر لهذا الأب؟
+    if(focused.parentId === parentId){
+      targetId = focused.id; // انزل للشخص المبحوث
+    }
+    // إذا لا → تجاهل البحث وانزل للابن الأول
+  }
+
+  if(!targetId) targetId = children[0].id;
+  navToSibling(targetId);
+}
+
+function navToSibling(id){
+  const n=nodes[id]; if(!n) return;
+  _lastFocusedId=id;
+  // انتقل للعقدة
+  const wrap=document.getElementById('canvas-wrap');
+  if(!wrap) return;
+  const ww=wrap.clientWidth||window.innerWidth;
+  const wh=wrap.clientHeight||(window.innerHeight-150);
+  window._panTo(n.x+NODE_W/2, n.y+NODE_H/2, ww, wh);
+  // هايلايت مؤقت
+  document.querySelectorAll('.node').forEach(el=>el.classList.remove('search-highlight'));
+  const el=document.getElementById('node-'+id);
+  if(el){ el.classList.add('search-highlight'); setTimeout(()=>el.classList.remove('search-highlight'),1500); }
+}
+
+function toggleTheme(){
+  const isLight=document.documentElement.classList.toggle('light-theme');
+  localStorage.setItem('theme', isLight?'light':'dark');
+  const btn=document.getElementById('themeBtn');
+  if(btn) btn.textContent=isLight?'☀️':'🌙';
+}
+
+if(localStorage.getItem('theme')==='light'){
+  document.documentElement.classList.add('light-theme');
 }
 
 function clearHighlight(){
@@ -1683,9 +1859,6 @@ function hideLpTooltip(){
   },{passive:true});
 
 })();
-</script>
-</body>
-</html>
 </script>
 </body>
 </html>
