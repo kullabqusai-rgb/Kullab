@@ -255,6 +255,7 @@
     #searchInput:focus{width:190px;}
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 </head>
 <body>
 
@@ -624,7 +625,23 @@ async function loadFromCloud(){
       ? {'X-Master-Key': binMasterKey}
       : {'X-Access-Key': binReadKey};
     const r1=await fetch(`${BIN_BASE}/${binDataId}/latest`,{headers});
-    if(r1.ok){const j=await r1.json();const d=j.record||{};nodes=d.nodes||{};nextId=d.nextId||1;}
+    if(r1.ok){
+      const j=await r1.json();const d=j.record||{};
+      let payload=d;
+      // دعم الصيغة المضغوطة الجديدة (_z) مع الحفاظ على القدرة على قراءة الصيغة القديمة غير المضغوطة
+      if(d && typeof d._z === 'string'){
+        try{
+          const decompressed = LZString.decompressFromBase64(d._z);
+          if(decompressed){ payload = JSON.parse(decompressed); }
+          else { throw new Error('فشل فك الضغط'); }
+        }catch(e){
+          console.error('فشل فك ضغط البيانات:',e);
+          toast('❌ خطأ في قراءة البيانات المضغوطة — لم يتم تعديل أي شيء');
+          payload = {nodes:nodes,nextId:nextId}; // لا نلمس البيانات الحالية في الذاكرة عند الفشل
+        }
+      }
+      nodes=payload.nodes||{}; nextId=payload.nextId||1;
+    }
     const r2=await fetch(`${BIN_BASE}/${binSettingsId}/latest`,{headers});
     if(r2.ok){const j=await r2.json();tempPasswords=(j.record||{}).tempPws||[];}
   }catch(e){toast('⚠️ تعذّر الاتصال بالسحابة');}
@@ -640,10 +657,20 @@ async function save(){
   _saveTimer=setTimeout(async()=>{
     bar(true);
     try{
+      const rawJson = JSON.stringify({nodes,nextId});
+      const compressed = LZString.compressToBase64(rawJson);
+      // تحقق أمان: نفك الضغط فوراً ونتأكد إنه يطابق الأصل قبل الإرسال — لو في أي خلل، نوقف ولا نرسل شيء
+      const verify = LZString.decompressFromBase64(compressed);
+      if(verify !== rawJson){
+        toast('❌ تم إيقاف الحفظ: فشل التحقق من سلامة الضغط — بياناتك الحالية لم تتأثر');
+        console.error('Compression verification failed — aborting save to protect data');
+        bar(false);
+        return;
+      }
       const res=await fetch(`${BIN_BASE}/${binDataId}`,{
         method:'PUT',
         headers:{'Content-Type':'application/json','X-Master-Key':binMasterKey},
-        body:JSON.stringify({nodes,nextId})
+        body:JSON.stringify({_z:compressed})
       });
       if(!res.ok){
         const errTxt=await res.text().catch(()=>'');
