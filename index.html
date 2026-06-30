@@ -173,6 +173,16 @@
   .badge-expired{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.3);
     padding:1px 7px;border-radius:10px;font-size:10px;}
 
+  /* ── VISITORS ── */
+  .visitor-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:10px 12px;font-size:11px;line-height:1.8;}
+  .visitor-card .vc-time{color:var(--gold);font-weight:700;font-size:12px;}
+  .visitor-card .vc-info{color:var(--text-dim);}
+  .visitor-stat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+    padding:8px 14px;text-align:center;min-width:80px;}
+  .visitor-stat .vs-num{font-size:20px;font-weight:700;color:var(--gold);}
+  .visitor-stat .vs-lbl{font-size:10px;color:var(--text-dim);}
+
   /* ── EXPORT OVERLAY PROGRESS ── */
   #exportOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:400;
     align-items:center;justify-content:center;flex-direction:column;gap:16px;}
@@ -254,6 +264,7 @@
     <span class="logo-text">شجرة العائلة</span>
   </div>
   <div class="header-actions" id="headerActions">
+    <button class="btn btn-outline" onclick="openModal('helpModal')" title="إرشادات الاستخدام">❓ مساعدة</button>
     <button class="btn btn-outline" onclick="openAdminLogin()">🔑 دخول المدير</button>
   </div>
 </header>
@@ -360,7 +371,7 @@
           <div class="ec-title">SVG</div>
           <div class="ec-desc">رسوم متجهة قابلة للتكبير بلا حدود</div>
         </div>
-        <div class="export-card" data-fmt="json" onclick="selectFmt(this,'json')">
+        <div class="export-card" data-fmt="json" id="jsonExportCard" onclick="selectFmt(this,'json')">
           <div class="ec-icon">💾</div>
           <div class="ec-title">JSON احتياطي</div>
           <div class="ec-desc">حفظ كامل البيانات للاستعادة لاحقاً</div>
@@ -416,6 +427,11 @@
     <div class="form-group"><label>كلمة المرور</label>
       <input type="password" id="adminPass" placeholder="••••••••"
         onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <div class="form-group"><label>🔐 Master Key (للحفظ)</label>
+      <input type="password" id="adminMasterKey" placeholder="$2a$10$..."
+        onkeydown="if(event.key==='Enter')doAdminLogin()">
+      <div style="font-size:10px;color:var(--text-dim);margin-top:4px">مطلوب فقط للإضافة والتعديل — اتركه فارغاً للعرض فقط</div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('adminModal')">إلغاء</button>
       <button class="btn btn-gold" onclick="doAdminLogin()">دخول</button>
@@ -433,6 +449,49 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('changePwModal')">إلغاء</button>
       <button class="btn btn-gold" onclick="doChangePw()">تغيير</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HELP MODAL ══ -->
+<div class="modal-bg" id="helpModal">
+  <div class="modal" style="width:520px;max-width:96vw;max-height:82vh;display:flex;flex-direction:column">
+    <h3>❓ إرشادات استخدام شجرة العائلة</h3>
+    <div style="flex:1;overflow-y:auto;font-size:13px;line-height:2;color:var(--text);padding-left:4px">
+
+      <div style="font-weight:700;color:var(--gold);margin:10px 0 6px">🔍 التصفح والبحث</div>
+      <div style="color:var(--text-dim)">
+        • ابحث باسم الشخص في خانة البحث أعلى الصفحة، ثم اضغط على النتيجة للانتقال إليه مباشرة.<br>
+        • اضغط ضغطاً مطولاً على أي اسم لرؤية سلسلة أجداده كاملة.<br>
+        • استخدم إصبعين للتكبير والتصغير (Pinch)، وإصبعاً واحداً للتحرك بحرية في الشجرة.<br>
+        • على كل شخص أزرار صغيرة: ↑ للأب، ↓ للأبناء، ◀▶ للإخوة البعيدين — لتسهيل التنقل.<br>
+        • زر 🎯 يعيد توسيط الشجرة في أي وقت إذا ضعت داخلها.<br>
+        • زر 🌙/☀️ يبدّل بين المظهر الداكن والفاتح.
+      </div>
+
+      <div style="font-weight:700;color:var(--gold);margin:14px 0 6px">📤 التصدير</div>
+      <div style="color:var(--text-dim)">
+        • اضغط زر "تصدير" لحفظ صورة من الشجرة.<br>
+        • يمكنك اختيار: الشجرة كاملة، أو نطاق جزئي (أجداد وأبناء، كل الذرية، العائلة المباشرة...).<br>
+        • صيغ الحفظ المتاحة: PNG، JPG، SVG (متجه عالي الجودة)، وJSON (نسخة احتياطية كاملة من البيانات).
+      </div>
+
+    </div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-gold" onclick="closeModal('helpModal')">فهمت، إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VISITORS MODAL ══ -->
+<div class="modal-bg" id="visitorsModal">
+  <div class="modal" style="width:480px;max-width:96vw;max-height:80vh;display:flex;flex-direction:column">
+    <h3>👁️ سجل الزوار</h3>
+    <div id="visitorsStats" style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap"></div>
+    <div id="visitorsList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-actions" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="closeModal('visitorsModal')">إغلاق</button>
+      <button class="btn btn-danger" onclick="clearVisitors()">🗑️ مسح السجل</button>
     </div>
   </div>
 </div>
@@ -517,7 +576,7 @@
 let nodes        = {};
 let isAdmin      = false;
 let isTempUser   = false;
-let adminPass    = 'Anan851103';
+let adminPass    = 'ecde979e3bb2f03d7af67d91a143a0da676e2bf365fb64d8c5563d70f0e84787'; // SHA-256
 let tempPasswords= [];
 let editingId    = null;
 let editingParentId = null;
@@ -532,9 +591,11 @@ const H_GAP  = 50,  V_GAP  = 90;
 // ══════════════════════════════════════════════════
 const CFG_KEY = 'ftree_cfg';
 const BIN_BASE = 'https://api.jsonbin.io/v3/b';
-let binMasterKey='$2a$10$Ljsisj2JIOoeQhWi7Qr9B.64VB0Jfc/y2uM1MAgNwWEP5qWrzSflu';
+let binMasterKey='';  // لا يُخزَّن في الكود — يُدخله المدير فقط عند تسجيل الدخول
+let binReadKey='$2a$10$gHi821O7wSvpjKS3fGt4De7JVpXsXl3OgNI9ssOjtMjdzC7e2bDWi'; // للقراءة فقط (عام)
 let binDataId='6a2ddb99f5f4af5e29edacdb';
 let binSettingsId='6a2ddbd1da38895dfebc27bc';
+let binVisitorsId='6a4258fada38895dfe0f93f7';
 
 function loadBinConfig(){
   // المفاتيح مدمجة في الكود مباشرة
@@ -550,7 +611,7 @@ function saveBinConfig(){
   toast('✅ تم الحفظ — جاري التحميل...');
   loadFromCloud();
 }
-function isCloudOK(){ return binMasterKey&&binDataId&&binSettingsId; }
+function isCloudOK(){ return (binMasterKey||binReadKey)&&binDataId&&binSettingsId; }
 
 // ══════════════════════════════════════════════════
 //  CLOUD  READ / WRITE
@@ -558,9 +619,13 @@ function isCloudOK(){ return binMasterKey&&binDataId&&binSettingsId; }
 async function loadFromCloud(){
   bar(true);
   try{
-    const r1=await fetch(`${BIN_BASE}/${binDataId}/latest`,{headers:{'X-Master-Key':binMasterKey}});
+    // استخدم Master Key إن وُجد، وإلا استخدم Access Key للقراءة
+    const headers = binMasterKey
+      ? {'X-Master-Key': binMasterKey}
+      : {'X-Access-Key': binReadKey};
+    const r1=await fetch(`${BIN_BASE}/${binDataId}/latest`,{headers});
     if(r1.ok){const j=await r1.json();const d=j.record||{};nodes=d.nodes||{};nextId=d.nextId||1;}
-    const r2=await fetch(`${BIN_BASE}/${binSettingsId}/latest`,{headers:{'X-Master-Key':binMasterKey}});
+    const r2=await fetch(`${BIN_BASE}/${binSettingsId}/latest`,{headers});
     if(r2.ok){const j=await r2.json();tempPasswords=(j.record||{}).tempPws||[];}
   }catch(e){toast('⚠️ تعذّر الاتصال بالسحابة');}
   bar(false); render();
@@ -569,17 +634,25 @@ async function loadFromCloud(){
 
 let _saveTimer=null;
 async function save(){
+  if(!binMasterKey){ toast('⚠️ الحفظ يتطلب دخول المدير بمفتاح Master Key'); return; }
   if(!isCloudOK()) return;
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(async()=>{
     bar(true);
     try{
-      await fetch(`${BIN_BASE}/${binDataId}`,{
+      const res=await fetch(`${BIN_BASE}/${binDataId}`,{
         method:'PUT',
         headers:{'Content-Type':'application/json','X-Master-Key':binMasterKey},
         body:JSON.stringify({nodes,nextId})
       });
-    }catch(e){toast('⚠️ فشل الحفظ');}
+      if(!res.ok){
+        const errTxt=await res.text().catch(()=>'');
+        toast('❌ فشل الحفظ: '+res.status+' — تحقق من Master Key');
+        console.error('Save failed:',res.status,errTxt);
+      } else {
+        toast('✅ تم الحفظ في السحابة');
+      }
+    }catch(e){toast('❌ فشل الحفظ: تعذّر الاتصال');console.error(e);}
     bar(false);
   },800);
 }
@@ -612,8 +685,8 @@ function bar(on){
 window.onload=()=>{
   loadBinConfig();
   if(isCloudOK()) loadFromCloud(); else render();
-  // تعيين order للأشخاص القدامى الذين ليس لهم order
   setTimeout(initOrders, 800);
+  setTimeout(recordVisit, 3000);
 };
 
 // ══════════════════════════════════════════════════
@@ -641,7 +714,7 @@ function autoLayout(){
     const kids=children[id]||[];
     if(!kids.length){
       nodes[id].x = colStart*(NODE_W+H_GAP)+60;
-      nodes[id].y = depth  *(NODE_H+V_GAP)+60;
+      nodes[id].y = depth*(NODE_H+V_GAP)+60;
       return;
     }
     let cur=colStart;
@@ -696,6 +769,7 @@ function updateToolbar(){
     <button class="btn btn-blue" onclick="openExportModal()">📤 تصدير</button>
     <button class="btn btn-outline" onclick="window._userHasPanned=false;window._centerTree&&window._centerTree()" title="توسيط الشجرة">🎯</button>
     <button class="btn btn-outline" id="themeBtn" onclick="toggleTheme()" title="تبديل المظهر">🌙</button>
+    ${isAdmin?`<button class="btn btn-outline" onclick="openVisitors()" title="سجل الزوار">👁️</button>`:''}
     <span style="font-size:13px;color:var(--text-dim);padding:0 6px">👥 <strong style="color:var(--gold)">${Object.keys(nodes).length}</strong> فرد</span>
   `;
   const tb2=document.getElementById('themeBtn');
@@ -888,7 +962,7 @@ function savePerson(){
       note:document.getElementById('pNote').value.trim(),
       parentId:editingParentId,x:0,y:0,order:newOrder};
   }
-  save(); closeModal('personModal'); render(); toast('✅ تم الحفظ');
+  save(); closeModal('personModal'); render();
 }
 function countSubtree(id){
   // يحسب الشخص + كل ذريته
@@ -948,19 +1022,27 @@ function confirmDelete(){
 // ══════════════════════════════════════════════════
 function openAdminLogin(){ openModal('adminModal'); }
 
-function doAdminLogin(){
+async function doAdminLogin(){
   const pw=document.getElementById('adminPass').value.trim();
+  const mk=document.getElementById('adminMasterKey').value.trim();
   document.getElementById('adminPass').value='';
+  document.getElementById('adminMasterKey').value='';
 
-  if(pw===adminPass){
+  const hashBuffer=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pw));
+  const hashHex=Array.from(new Uint8Array(hashBuffer)).map(b=>b.toString(16).padStart(2,"0")).join("");
+
+  if(hashHex===adminPass){
     isAdmin=true; isTempUser=false;
-    closeModal('adminModal'); updateAdminUI(); toast('✅ مرحباً بك أيها المدير');
+    if(mk) binMasterKey=mk; // خزّن المفتاح في الذاكرة فقط
+    closeModal('adminModal'); updateAdminUI();
+    toast(mk?'✅ مرحباً بك أيها المدير — صلاحية كاملة':'✅ مرحباً بك أيها المدير — عرض فقط');
     return;
   }
   const now=Date.now();
   const m=tempPasswords.find(tp=>tp.pass===pw&&(tp.expiry===0||tp.expiry>now));
   if(m){
     isAdmin=false; isTempUser=true;
+    if(mk) binMasterKey=mk;
     closeModal('adminModal'); updateAdminUI(m.label);
     toast('✅ مرحباً '+m.label);
     return;
@@ -970,8 +1052,10 @@ function doAdminLogin(){
 
 function updateAdminUI(tempLabel){
   const ha=document.getElementById('headerActions');
+  const helpBtn=`<button class="btn btn-outline" onclick="openModal('helpModal')" title="إرشادات الاستخدام">❓ مساعدة</button>`;
   if(isAdmin){
     ha.innerHTML=`
+      ${helpBtn}
       <span class="admin-badge">👑 مدير</span>
       <button class="btn btn-outline" onclick="openModal('tempPwModal');renderTempTable()">🗝️ مؤقتة</button>
       <button class="btn btn-outline" onclick="openModal('changePwModal')">🔒 كلمة المرور</button>
@@ -979,24 +1063,29 @@ function updateAdminUI(tempLabel){
       <button class="btn btn-danger" onclick="adminLogout()">خروج</button>`;
   } else if(isTempUser){
     ha.innerHTML=`
+      ${helpBtn}
       <span class="temp-badge">🗝️ ${tempLabel||'مؤقت'}</span>
       <button class="btn btn-danger" onclick="adminLogout()">خروج</button>`;
   } else {
-    ha.innerHTML=`<button class="btn btn-outline" onclick="openAdminLogin()">🔑 دخول المدير</button>`;
+    ha.innerHTML=`${helpBtn}<button class="btn btn-outline" onclick="openAdminLogin()">🔑 دخول المدير</button>`;
   }
   render();
 }
 
 function adminLogout(){ isAdmin=false; isTempUser=false; updateAdminUI(); toast('👋 تم الخروج'); }
 
-function doChangePw(){
+async function doChangePw(){
   const o=document.getElementById('oldPw').value;
   const n=document.getElementById('newPw').value;
   const n2=document.getElementById('newPw2').value;
-  if(o!==adminPass){toast('❌ الحالية خاطئة');return;}
+  // تحقق من القديمة بالـ hash
+  const oldHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(o)))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  if(oldHash!==adminPass){toast('❌ الحالية خاطئة');return;}
   if(!n){toast('⚠️ أدخل كلمة جديدة');return;}
   if(n!==n2){toast('⚠️ لا تتطابقان');return;}
-  adminPass=n;
+  // خزّن الـ hash الجديد
+  const newHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(n)))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  adminPass=newHash;
   closeModal('changePwModal');
   ['oldPw','newPw','newPw2'].forEach(i=>document.getElementById(i).value='');
   toast('✅ تم تغيير كلمة المرور');
@@ -1005,13 +1094,15 @@ function doChangePw(){
 // ══════════════════════════════════════════════════
 //  TEMP PASSWORDS
 // ══════════════════════════════════════════════════
-function addTempPass(){
+async function addTempPass(){
   const label=document.getElementById('tpLabel').value.trim();
   const pass =document.getElementById('tpPass').value.trim();
   const days =parseInt(document.getElementById('tpExpiry').value);
   if(!label){toast('⚠️ أدخل اسماً');return;}
   if(!pass) {toast('⚠️ أدخل كلمة المرور');return;}
-  if(pass===adminPass){toast('⚠️ لا يمكن استخدام كلمة المدير');return;}
+  // قارن بالـ hash لمنع استخدام كلمة المدير
+  const h=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass)))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  if(h===adminPass){toast('⚠️ لا يمكن استخدام كلمة المدير');return;}
   const expiry=days===0?0:Date.now()+days*86400000;
   tempPasswords.push({id:Date.now().toString(),label,pass,expiry});
   saveTempPasswords(); renderTempTable();
@@ -1277,6 +1368,102 @@ function navToSibling(id){
   if(el){ el.classList.add('search-highlight'); setTimeout(()=>el.classList.remove('search-highlight'),1500); }
 }
 
+// ══════════════════════════════════════════════════
+//  VISITORS TRACKING
+// ══════════════════════════════════════════════════
+const VISITORS_KEY='ftree_visitors';
+
+async function recordVisit(){
+  try{
+    let info={ip:'—',country:'—',city:'—',org:'—'};
+    try{
+      const r=await fetch('https://ipapi.co/json/');
+      if(r.ok){const d=await r.json();info={ip:d.ip||'—',country:d.country_name||'—',city:d.city||'—',org:d.org||'—'};}
+    }catch(_){}
+    const visit={
+      time:new Date().toISOString(),
+      ip:info.ip, country:info.country, city:info.city, org:info.org,
+      device:/Mobile|Android|iPhone/i.test(navigator.userAgent)?'📱 موبايل':'💻 كمبيوتر',
+      browser:getBrowser()
+    };
+    // احفظ محلياً
+    const visits=JSON.parse(localStorage.getItem(VISITORS_KEY)||'[]');
+    visits.unshift(visit);
+    if(visits.length>200) visits.splice(200);
+    localStorage.setItem(VISITORS_KEY,JSON.stringify(visits));
+    // احفظ في bin الزوار المنفصل
+    if(binMasterKey&&binVisitorsId){
+      try{
+        const r2=await fetch(`${BIN_BASE}/${binVisitorsId}/latest`,{headers:{'X-Master-Key':binMasterKey}});
+        const rec=(r2.ok?(await r2.json()).record:null)||{visits:[]};
+        rec.visits=rec.visits||[];
+        rec.visits.unshift(visit);
+        if(rec.visits.length>500) rec.visits.splice(500);
+        await fetch(`${BIN_BASE}/${binVisitorsId}`,{method:'PUT',
+          headers:{'Content-Type':'application/json','X-Master-Key':binMasterKey},
+          body:JSON.stringify(rec)});
+      }catch(_){}
+    }
+  }catch(_){}
+}
+
+function getBrowser(){
+  const ua=navigator.userAgent;
+  if(ua.includes('Chrome')&&!ua.includes('Edg')) return 'Chrome';
+  if(ua.includes('Firefox')) return 'Firefox';
+  if(ua.includes('Safari')&&!ua.includes('Chrome')) return 'Safari';
+  if(ua.includes('Edg')) return 'Edge';
+  return 'متصفح آخر';
+}
+
+async function openVisitors(){
+  const el=document.getElementById('visitorsList');
+  const stats=document.getElementById('visitorsStats');
+  el.innerHTML='<div style="color:var(--text-dim);text-align:center;padding:20px">⏳ جاري التحميل...</div>';
+  openModal('visitorsModal');
+  let visits=[];
+  if(binMasterKey&&binVisitorsId){
+    try{
+      const r=await fetch(`${BIN_BASE}/${binVisitorsId}/latest`,{headers:{'X-Master-Key':binMasterKey}});
+      if(r.ok){const j=await r.json();visits=(j.record||{}).visits||[];}
+    }catch(_){}
+  }
+  if(!visits.length) visits=JSON.parse(localStorage.getItem(VISITORS_KEY)||'[]');
+  if(!visits.length){
+    el.innerHTML='<div style="color:var(--text-dim);text-align:center;padding:30px">لا توجد زيارات مسجلة بعد</div>';
+    stats.innerHTML=''; return;
+  }
+  const countries=[...new Set(visits.map(v=>v.country))];
+  const today=visits.filter(v=>new Date(v.time).toDateString()===new Date().toDateString()).length;
+  stats.innerHTML=`
+    <div class="visitor-stat"><div class="vs-num">${visits.length}</div><div class="vs-lbl">إجمالي</div></div>
+    <div class="visitor-stat"><div class="vs-num">${today}</div><div class="vs-lbl">اليوم</div></div>
+    <div class="visitor-stat"><div class="vs-num">${countries.length}</div><div class="vs-lbl">دولة</div></div>
+    <div class="visitor-stat"><div class="vs-num">${visits.filter(v=>v.device&&v.device.includes('موبايل')).length}</div><div class="vs-lbl">📱</div></div>`;
+  el.innerHTML=visits.map(v=>{
+    const d=new Date(v.time);
+    const ds=d.toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'});
+    const ts=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="visitor-card">
+      <div class="vc-time">🕐 ${ds} — ${ts}</div>
+      <div class="vc-info">🌍 ${v.country||'—'} — ${v.city||'—'}<br>🔌 ${v.ip||'—'}<br>${v.org?`🏢 ${v.org}<br>`:''} ${v.device||''} · ${v.browser||''}</div>
+    </div>`;
+  }).join('');
+}
+
+async function clearVisitors(){
+  if(!confirm('هل تريد مسح سجل الزوار كاملاً؟')) return;
+  localStorage.removeItem(VISITORS_KEY);
+  if(binMasterKey&&binVisitorsId){
+    try{
+      await fetch(`${BIN_BASE}/${binVisitorsId}`,{method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':binMasterKey},
+        body:JSON.stringify({visits:[]})});
+    }catch(_){}
+  }
+  closeModal('visitorsModal'); toast('✅ تم مسح السجل');
+}
+
 function toggleTheme(){
   const isLight=document.documentElement.classList.toggle('light-theme');
   localStorage.setItem('theme', isLight?'light':'dark');
@@ -1325,6 +1512,18 @@ function openExportModal(){
 
   // إذا لا يوجد شخص محدد، ارجع لـ "كل الشجرة"
   if(!hasTarget && _exportScope!=='all') setExportScope('all');
+
+  // JSON الاحتياطي متاح فقط للمدير الكامل (وليس حتى المستخدم المؤقت)
+  const jsonCard=document.getElementById('jsonExportCard');
+  if(jsonCard){
+    jsonCard.style.display = isAdmin ? '' : 'none';
+    if(!isAdmin && _exportFmt==='json'){
+      _exportFmt='png';
+      document.querySelectorAll('.export-card').forEach(c=>c.classList.remove('selected'));
+      const pngCard=document.querySelector('.export-card[data-fmt="png"]');
+      if(pngCard) pngCard.classList.add('selected');
+    }
+  }
 
   document.getElementById('exportPreviewWrap').innerHTML=
     '<span style="color:var(--text-dim);font-size:12px">اضغط "معاينة" لرؤية الشجرة قبل الحفظ</span>';
@@ -1522,10 +1721,9 @@ function buildTreeCanvas(exportNodes,scale,bgMode){
       ctx.font='11px Tajawal,Arial'; ctx.fillStyle=isDark?'#8a7a62':'#6a5a42';
       ctx.fillText(words.slice(3).join(' '),x+NW/2,y+56);
     }
-    if(n.birth||n.note){
+    if(n.birth){
       ctx.font='10px Tajawal,Arial'; ctx.fillStyle=isDark?'#8a7a62':'#6a5a42';
-      const info=(n.birth?'📅 '+n.birth:'')+(n.note&&n.birth?' · ':'')+( n.note||'');
-      ctx.fillText(info.slice(0,28),x+NW/2,y+NH-12);
+      ctx.fillText('📅 '+n.birth,x+NW/2,y+NH-10);
     }
   });
 
@@ -1574,7 +1772,7 @@ function buildTreeSVG(exportNodes){
     svg+=`<rect x="${x}" y="${y}" width="${NW}" height="${NH}" rx="10" fill="url(#${gid})" stroke="${isRoot?'#c9962a':'#2e2820'}" stroke-width="${isRoot?2:1.2}"/>`;
     svg+=`<text x="${x+NW/2}" y="${y+22}" font-size="16" text-anchor="middle" dominant-baseline="middle">${n.gender==='f'?'👩':'👨'}</text>`;
     svg+=`<text x="${x+NW/2}" y="${y+46}" font-size="${isRoot?14:12}" font-weight="bold" fill="${isRoot?'#e8c84a':'#e8dcc8'}" text-anchor="middle" direction="rtl">${n.name}</text>`;
-    if(n.birth||n.note){ const info=(n.birth?'📅 '+n.birth:'')+(n.note&&n.birth?' · ':'')+( n.note||''); svg+=`<text x="${x+NW/2}" y="${y+NH-10}" font-size="9" fill="#8a7a62" text-anchor="middle">${info.slice(0,30)}</text>`; }
+    if(n.birth){ svg+=`<text x="${x+NW/2}" y="${y+NH-10}" font-size="9" fill="#8a7a62" text-anchor="middle">📅 ${n.birth}</text>`; }
   });
 
   svg+=`<text x="${mX/2}" y="${mY-12}" font-size="14" fill="rgba(201,150,42,0.45)" text-anchor="middle">شجرة العائلة</text></svg>`;
@@ -1596,6 +1794,11 @@ async function runExportPreview(){
 
 async function runExport(){
   if(!Object.keys(nodes).length){ toast('⚠️ لا توجد بيانات'); return; }
+  // حماية: منع تصدير JSON لغير المدير الكامل حتى لو تم التلاعب بالواجهة
+  if(_exportFmt==='json' && !isAdmin){
+    toast('🚫 النسخة الاحتياطية JSON متاحة للمدير فقط');
+    return;
+  }
   const ov=document.getElementById('exportOverlay');
   document.getElementById('exportOverlayMsg').textContent='⏳ جاري البناء...';
   ov.classList.add('show'); closeModal('exportModal');
