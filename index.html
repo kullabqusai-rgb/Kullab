@@ -15,13 +15,16 @@
     --gold: #a9863f;
     --gold-soft: #c9ab6c;
     --line: rgba(169,134,63,0.35);
+    --leaf-dark: #3f5c39;
+    --leaf-mid: #5d7d4f;
+    --leaf-light: #82a069;
+    --bark: #5a4130;
+    --bark-light: #7a5c3e;
   }
 
   *{ margin:0; padding:0; box-sizing:border-box; }
 
-  html, body{
-    height:100%;
-  }
+  html, body{ height:100%; }
 
   body{
     background:
@@ -33,15 +36,14 @@
     justify-content:center;
     overflow:hidden;
     position:relative;
+    min-height:100vh;
   }
 
-  /* نسيج ورقي خفيف */
   body::before{
     content:"";
     position:fixed;
     inset:0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
     background-size: 3px 3px;
     pointer-events:none;
     z-index:1;
@@ -67,50 +69,14 @@
   .frame::before{ top:-1px; right:-1px; border-left:none; border-bottom:none; }
   .frame::after{ bottom:-1px; left:-1px; border-right:none; border-top:none; }
 
-  .branch-wrap{
-    width: 220px;
-    margin: 0 auto 34px;
+  .tree-wrap{
+    width: 260px;
+    height: 280px;
+    margin: 0 auto 30px;
   }
-
-  .branch-wrap svg{
-    width:100%;
-    height:auto;
-    overflow: visible;
-  }
-
-  .branch-line{
-    fill:none;
-    stroke: var(--gold-soft);
-    stroke-width: 1.4;
-    stroke-linecap: round;
-    stroke-dasharray: 260;
-    stroke-dashoffset: 260;
-    animation: draw 2.6s ease-out forwards;
-  }
-
-  .leaf{
-    fill: var(--parchment-dim);
-    fill-opacity: 0;
-    transform-origin: center;
-    transform-box: fill-box;
-    animation: bud 1.2s ease-out forwards;
-  }
-  .leaf.l1{ animation-delay: 1.1s; }
-  .leaf.l2{ animation-delay: 1.4s; }
-  .leaf.l3{ animation-delay: 1.7s; }
-  .leaf.l4{ animation-delay: 2.0s; }
-  .leaf.l5{ animation-delay: 2.3s; }
-
-  @keyframes draw{
-    to{ stroke-dashoffset: 0; }
-  }
-  @keyframes bud{
-    from{ fill-opacity:0; transform: scale(0.4); }
-    to{ fill-opacity:1; transform: scale(1); }
-  }
+  #treeCanvas{ display:block; margin:0 auto; }
 
   .eyebrow{
-    font-family:'Tajawal', sans-serif;
     font-weight:300;
     letter-spacing: 3px;
     font-size: 0.72rem;
@@ -118,7 +84,7 @@
     text-transform: uppercase;
     margin-bottom: 18px;
     opacity: 0;
-    animation: fade 1s ease-out 2.6s forwards;
+    animation: fade 1s ease-out 4.6s forwards;
   }
 
   h1{
@@ -129,7 +95,16 @@
     color: var(--parchment);
     margin-bottom: 16px;
     opacity:0;
-    animation: fade 1.1s ease-out 2.8s forwards;
+    animation: fade 1.1s ease-out 4.8s forwards;
+  }
+
+  .divider{
+    width: 60px;
+    height:1px;
+    background: var(--gold-soft);
+    margin: 26px auto;
+    opacity:0;
+    animation: fade 1s ease-out 4.7s forwards;
   }
 
   p.desc{
@@ -140,30 +115,12 @@
     max-width: 420px;
     margin: 0 auto;
     opacity:0;
-    animation: fade 1.1s ease-out 3.1s forwards;
-  }
-
-  .divider{
-    width: 60px;
-    height:1px;
-    background: var(--gold-soft);
-    margin: 26px auto;
-    opacity:0;
-    animation: fade 1s ease-out 3s forwards;
+    animation: fade 1.1s ease-out 5s forwards;
   }
 
   @keyframes fade{
     from{ opacity:0; transform: translateY(8px); }
     to{ opacity:1; transform: translateY(0); }
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    .branch-line, .leaf, .eyebrow, h1, p.desc, .divider{
-      animation: none !important;
-      opacity:1 !important;
-      stroke-dashoffset: 0 !important;
-      fill-opacity:1 !important;
-    }
   }
 
   .actions{
@@ -172,7 +129,7 @@
     gap: 14px;
     margin-top: 34px;
     opacity:0;
-    animation: fade 1.1s ease-out 3.4s forwards;
+    animation: fade 1.1s ease-out 5.3s forwards;
   }
 
   .btn{
@@ -197,10 +154,7 @@
     font-weight: 500;
     border: 1px solid var(--gold);
   }
-  .btn-primary:hover{
-    background: var(--gold-soft);
-    transform: translateY(-2px);
-  }
+  .btn-primary:hover{ background: var(--gold-soft); transform: translateY(-2px); }
 
   .btn-secondary{
     background: transparent;
@@ -208,15 +162,12 @@
     border: 1px solid var(--line);
     font-weight: 300;
   }
-  .btn-secondary:hover{
-    border-color: var(--gold-soft);
-    color: var(--parchment);
-    transform: translateY(-2px);
-  }
+  .btn-secondary:hover{ border-color: var(--gold-soft); color: var(--parchment); transform: translateY(-2px); }
 
   @media (max-width: 480px){
     h1{ font-size: 1.9rem; }
     .frame{ padding: 42px 24px; }
+    .tree-wrap{ width: 220px; height: 240px; }
   }
 </style>
 </head>
@@ -224,18 +175,8 @@
 
   <div class="frame">
 
-    <div class="branch-wrap">
-      <svg viewBox="0 0 220 140" xmlns="http://www.w3.org/2000/svg">
-        <path class="branch-line" d="M20,120 C60,100 70,80 110,70 C150,60 165,45 200,20" />
-        <path class="branch-line" d="M95,76 C88,60 90,45 78,32" style="animation-delay:0.4s; stroke-dasharray:70; stroke-dashoffset:70;" />
-        <path class="branch-line" d="M140,58 C145,45 142,32 152,18" style="animation-delay:0.7s; stroke-dasharray:60; stroke-dashoffset:60;" />
-
-        <ellipse class="leaf l1" cx="78" cy="28" rx="9" ry="5" transform="rotate(-30 78 28)"/>
-        <ellipse class="leaf l2" cx="152" cy="14" rx="9" ry="5" transform="rotate(20 152 14)"/>
-        <ellipse class="leaf l3" cx="196" cy="16" rx="10" ry="5.5" transform="rotate(-10 196 16)"/>
-        <ellipse class="leaf l4" cx="112" cy="66" rx="8" ry="4.5" transform="rotate(40 112 66)"/>
-        <ellipse class="leaf l5" cx="60" cy="102" rx="8" ry="4.5" transform="rotate(-45 60 102)"/>
-      </svg>
+    <div class="tree-wrap">
+      <canvas id="treeCanvas"></canvas>
     </div>
 
     <div class="eyebrow">قيد الإعداد</div>
@@ -259,6 +200,172 @@
     </div>
 
   </div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('treeCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  const wrap = document.querySelector('.tree-wrap');
+  const W = wrap.clientWidth;
+  const H = wrap.clientHeight;
+
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
+
+  const styles = getComputedStyle(document.documentElement);
+  const bark = styles.getPropertyValue('--bark').trim();
+  const barkLight = styles.getPropertyValue('--bark-light').trim();
+  const leafDark = styles.getPropertyValue('--leaf-dark').trim();
+  const leafMid = styles.getPropertyValue('--leaf-mid').trim();
+  const leafLight = styles.getPropertyValue('--leaf-light').trim();
+  const leafColors = [leafDark, leafMid, leafLight];
+
+  // مولّد أرقام عشوائية ثابت (نفس الشكل في كل مرة)
+  let seed = 7;
+  function rnd(){
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  }
+
+  const segments = [];
+  const leafPoints = [];
+  const MAX_DEPTH = 9;
+
+  function buildTree(x, y, len, angle, width, depth, startT){
+    const x2 = x + len * Math.cos(angle);
+    const y2 = y - len * Math.sin(angle);
+    const segDur = 0.42 / MAX_DEPTH;
+    const endT = startT + segDur;
+
+    segments.push({ x1:x, y1:y, x2, y2, width, startT, endT, depth });
+
+    const isTip = depth <= 0 || len < 3;
+
+    if(isTip){
+      const puffCount = 3 + Math.floor(rnd()*3);
+      const puffs = [];
+      for(let i=0;i<puffCount;i++){
+        puffs.push({
+          dx:(rnd()-0.5)*16,
+          dy:(rnd()-0.5)*16,
+          r:5+rnd()*6,
+          delay:rnd()*0.3,
+          colorPick:rnd()
+        });
+      }
+      leafPoints.push({ x:x2, y:y2, startT:endT, puffs });
+      return;
+    }
+
+    const spread = 16 + rnd()*16;
+    const lenNext = len * (0.7 + rnd()*0.08);
+    const widthNext = width * 0.68;
+
+    buildTree(x2, y2, lenNext, angle - spread*Math.PI/180, widthNext, depth-1, endT);
+    buildTree(x2, y2, lenNext, angle + spread*Math.PI/180, widthNext, depth-1, endT);
+  }
+
+  buildTree(0, 0, 46, Math.PI/2, 9, MAX_DEPTH, 0);
+
+  // احتساب الصندوق المحيط لضبط الحجم تلقائياً داخل الكانفاس
+  let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+  segments.forEach(s=>{
+    minX = Math.min(minX, s.x1, s.x2);
+    maxX = Math.max(maxX, s.x1, s.x2);
+    minY = Math.min(minY, s.y1, s.y2);
+    maxY = Math.max(maxY, s.y1, s.y2);
+  });
+  leafPoints.forEach(lp=>{
+    let maxR = 0;
+    lp.puffs.forEach(p=>{
+      maxR = Math.max(maxR, p.r + Math.abs(p.dx), p.r + Math.abs(p.dy));
+    });
+    minX = Math.min(minX, lp.x-maxR);
+    maxX = Math.max(maxX, lp.x+maxR);
+    minY = Math.min(minY, lp.y-maxR);
+    maxY = Math.max(maxY, lp.y+maxR);
+  });
+
+  const treeW = maxX-minX;
+  const treeH = maxY-minY;
+  const pad = 8;
+  const availW = W - pad*2;
+  const availH = H - pad*2;
+  const scale = Math.min(availW/treeW, availH/treeH);
+  const offsetX = pad - minX*scale + (availW - treeW*scale)/2;
+  const offsetY = pad - minY*scale + (availH - treeH*scale)/2;
+
+  function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
+
+  function draw(t){
+    ctx.clearRect(0,0,W,H);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+
+    segments.forEach(seg=>{
+      let lt = (t - seg.startT) / (seg.endT - seg.startT);
+      lt = Math.max(0, Math.min(1, lt));
+      if(lt<=0) return;
+      const eased = easeOutCubic(lt);
+      const ex = seg.x1 + (seg.x2-seg.x1)*eased;
+      const ey = seg.y1 + (seg.y2-seg.y1)*eased;
+      ctx.beginPath();
+      ctx.moveTo(seg.x1, seg.y1);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = seg.depth > MAX_DEPTH-3 ? barkLight : bark;
+      ctx.lineWidth = Math.max(0.7, seg.width);
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    });
+
+    leafPoints.forEach(lp=>{
+      const growWindow = 1.0;
+      let lt = (t - lp.startT) / growWindow;
+      lt = Math.max(0, Math.min(1, lt));
+      if(lt<=0) return;
+      lp.puffs.forEach(p=>{
+        let pt = (lt - p.delay) / (1 - p.delay + 0.001);
+        pt = Math.max(0, Math.min(1, pt));
+        if(pt<=0) return;
+        const eased = easeOutCubic(pt);
+        const r = p.r * eased;
+        const alpha = 0.88 * eased;
+        const color = leafColors[Math.floor(p.colorPick*3) % 3];
+        ctx.beginPath();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+        ctx.arc(lp.x + p.dx*eased, lp.y + p.dy*eased, r, 0, Math.PI*2);
+        ctx.fill();
+      });
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  const DURATION = 4600;
+  let startTime = null;
+
+  function frame(now){
+    if(!startTime) startTime = now;
+    const t = Math.min(1, (now-startTime)/DURATION);
+    draw(t);
+    if(t<1) requestAnimationFrame(frame);
+  }
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion){
+    draw(1);
+  } else {
+    requestAnimationFrame(frame);
+  }
+})();
+</script>
 
 </body>
 </html>
